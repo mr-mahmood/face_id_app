@@ -4,7 +4,7 @@ from deepface import DeepFace
 import numpy as np
 import time
 
-def recognize_face(face: np.ndarray) -> tuple[np.ndarray, float]:
+def embbeding_face(face: np.ndarray) -> tuple[np.ndarray, float]:
     """
     Generate a normalized facial embedding for a given face image using DeepFace.
 

@@ -39,7 +39,7 @@ def start_add_refrence_images(label_id: str):
         # Ensure all directories exist
         os.makedirs(DATASET_DIR, exist_ok=True)
         os.makedirs(os.path.dirname(FAISS_INDEX_PATH), exist_ok=True)
-        person_folder = os.path.join(DATASET_DIR, label_id)
+        person_folder = os.path.join(DATASET_DIR, f"id_{label_id}")
         os.makedirs(person_folder, exist_ok=True)
 
 
@@ -56,3 +56,34 @@ def start_add_refrence_images(label_id: str):
 
     except Exception as e:
         raise RuntimeError(f"Failed to initialize identity data for '{label_id}': {e}")
+
+def load_faiss():
+    """
+    Load FAISS for identity.
+
+    Returns
+    -------
+    index : faiss.IndexFlatIP
+        FAISS index object (either newly created or loaded from disk).
+
+    labels : list[str]
+        List of identity labels corresponding to each embedding in the FAISS index.
+
+    Raises
+    ------
+    RuntimeError
+        If fail to load labels or faiss.
+    """
+    try:
+        # Load or initialize FAISS index and labels
+        if os.path.exists(FAISS_INDEX_PATH) and os.path.exists(LABELS_PATH):
+            index = faiss.read_index(FAISS_INDEX_PATH)
+            with open(LABELS_PATH, "rb") as f:
+                labels = pickle.load(f)
+        else:
+            raise RuntimeError("Failed to load faiss and labels because it is not created yet.")
+
+        return index, labels
+
+    except Exception as e:
+        raise RuntimeError(f"Failed to load faiss and labels: {e}")

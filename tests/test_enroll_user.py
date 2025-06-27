@@ -1,6 +1,11 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import cv2
-from app import add_reference_image
 import time
+
+from app import add_reference_image
 
 num_trials = 1000
 total_latency = 0
@@ -9,7 +14,7 @@ total_emb_time = 0
 failures = 0
 
 for i in range(num_trials):
-    img = cv2.imread("./tests/temp.png")
+    img = cv2.imread("./tests/enroll_user_test.png")
     try:
         start = time.time()
         result = add_reference_image(img, "mahmood")

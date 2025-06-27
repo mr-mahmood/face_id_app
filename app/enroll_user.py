@@ -6,7 +6,7 @@ import cv2
 import os
 
 from app.config import LABELS_PATH, FAISS_INDEX_PATH
-from app import detect_faces, recognize_face, crop_face, resize_face, start_add_refrence_images
+from app import detect_faces, embbeding_face, crop_face, resize_face, start_add_refrence_images
 
 def add_reference_image(image: np.ndarray, new_id: str) -> dict:
     """
@@ -48,7 +48,7 @@ def add_reference_image(image: np.ndarray, new_id: str) -> dict:
     total_reference_number = len(os.listdir(new_id_folder))
 
     # === Embedding + indexing ===
-    embedding, emb_time = recognize_face(resized_face)
+    embedding, emb_time = embbeding_face(resized_face)
     faiss_index.add(np.expand_dims(embedding, axis=0))
     labels.append(new_id)
 

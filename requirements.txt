@@ -1,1 +1,3 @@
-# Required libraries
+python-dotenv
+ultralytics
+torch

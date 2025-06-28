@@ -23,7 +23,7 @@ def add_reference_image(image: np.ndarray, new_id: str) -> dict:
     Returns
     -------
     result : dict
-        Result info (message, status, label, time, etc.)
+        Result info (message, status, label)
     """
     try:
         faiss_index, labels, new_id_folder = start_add_refrence_images(new_id)
@@ -63,8 +63,6 @@ def add_reference_image(image: np.ndarray, new_id: str) -> dict:
             "status": "success",
             "message": f"User '{new_id}' enrolled successfully.",
             "label": new_id,
-            "rec_time": rec_time,
-            "emb_time": emb_time,
             "total_reference_number": total_reference_number
         }
 

@@ -38,4 +38,3 @@ def embbeding_face(face: np.ndarray) -> tuple[np.ndarray, float]:
     except Exception as e:
         raise RuntimeError(f"Failed to extract embedding: {e}")
 
-

@@ -23,17 +23,13 @@ def faiss_search(embedding: np.ndarray, top_k: int = 10) -> dict:
     -------
     result : dict
         {
+
+            "status": str,
+
             "label": str,
 
-            "confidence": float,
+            "confidence": float
 
-            "vote_ratio": float,
-
-            "mean_distance": float,
-
-            "faiss_time": float,
-            
-            "status": str
         }
     """
     try:
@@ -57,12 +53,9 @@ def faiss_search(embedding: np.ndarray, top_k: int = 10) -> dict:
 
         if not valid_entries:
             return {
+                "status": "no_match",
                 "label": "unknown",
-                "confidence": 0.0,
-                "vote_ratio": 0.0,
-                "mean_distance": float("inf"),
-                "faiss_time": faiss_time,
-                "status": "no_match"
+                "confidence": 0.0
             }
 
         # --- Weighted Voting ---
@@ -78,16 +71,14 @@ def faiss_search(embedding: np.ndarray, top_k: int = 10) -> dict:
         mean_distance = np.mean([dist for _, dist in valid_entries])
 
         # --- Confidence Decision ---
-        confidence = vote_ratio * top_k
+        confidence = vote_ratio
         is_confident = vote_ratio >= VOTE_THRESHOLD
-
+        
+        label_text = pred_label.replace("id_", "").replace("_", " ")
         return {
-            "label": pred_label if is_confident else "unknown",
-            "confidence": confidence,
-            "vote_ratio": vote_ratio,
-            "mean_distance": mean_distance,
-            "faiss_time": faiss_time,
-            "status": "ok" if is_confident else "unconfident"
+            "status": "ok" if is_confident else "unconfident",
+            "label": label_text,
+            "confidence": round(confidence, 3)
         }
     except Exception as e:
         raise RuntimeError(f"Failed on faiss search with error: {e}")

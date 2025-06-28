@@ -29,10 +29,10 @@ for i, res in enumerate(results["faces"]):
     cv2.putText(output, label_text, (x1, max(y1 - 10, 10)),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
-    print(f"[Face {i+1}] Label: {label_text} | emb_time: {res['emb_time']:.2f} ms | detect_time: {res['detect_time']:.2f} ms | total: {res['total_time']:.2f} ms")
+    print(f"[Face {i+1}] Label: {label_text} | emb_time: {res['embbeding_time']} | detect_time: {res['detection_time']} | total: {res['total_time']}")
     
-    total_emb_time += res["emb_time"]
-    total_total_time += res["total_time"]
+    total_emb_time += float(res["embbeding_time"].replace(" ms",""))
+    total_total_time += float(res["total_time"].replace(" ms",""))
 
 # --- Stats summary
 if results:

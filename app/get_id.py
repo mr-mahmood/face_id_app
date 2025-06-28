@@ -17,17 +17,15 @@ def get_id(image: np.ndarray) -> dict:
 
     Returns
     -------
-    result : dict
-        Recognition result for the most confident face detected. Contains:
+    results : dict
+        A dictionary containing the recognition result with status and message in it as well
+        
+        Recognition result for the most confident face detected in results["faces"]. Contains:
+            - status: str - ok / error
             - label: str - predicted identity or 'unknown'
             - confidence: float - scaled vote score
-            - vote_ratio: float - top label score over total
-            - mean_distance: float - avg. distance to top_k neighbors
-            - faiss_time: float - time taken for FAISS search (ms)
-            - detect_time: float - time taken for YOLO detection (ms)
-            - emb_time: float - time taken for embedding (ms)
+            - bounding_box - bounding_box of face
             - total_time: float - total time for processing (ms)
-            - status: str - ok / error
     """
     try:
         boxes, detect_time = detect_faces(image)
@@ -43,15 +41,16 @@ def get_id(image: np.ndarray) -> dict:
             start_total = time.time()
             x1, y1, x2, y2 = map(int, box)
             cropped_face, _ = crop_face(image, box)
-            resized_face, _ = resize_face(cropped_face)
+            resized_face, _ = resize_face(cropped_face, (112, 112))
             embedding, emb_time = embbeding_face(resized_face)
             result = faiss_search(embedding)
             total_time = (time.time() - start_total) * 1000
+            total_time += detect_time
             result.update({
                 "bounding_box": (x1, y1, x2, y2),
-                "detect_time": detect_time / len(boxes),
-                "emb_time": emb_time,
-                "total_time": total_time
+                "detection_time": f"{detect_time:.2f} ms",
+                "embbeding_time": f"{emb_time:.2f} ms",
+                "total_time": f"{total_time:.2f} ms"
             })
             all_result.append(result)
 

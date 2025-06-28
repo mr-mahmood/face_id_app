@@ -29,18 +29,13 @@ def detect_faces(image: np.ndarray, conf_threshold: float = 0.7) -> tuple[np.nda
     """
     try:
         model = get_model()
-        start = time.time()
         results = model(image, verbose=False)[0]
-
-        # Extract boxes and confidences
         all_boxes = results.boxes.xyxy.cpu().numpy()
         confidences = results.boxes.conf.cpu().numpy()
-
-        # Filter by confidence threshold
+        total_time = results.speed['preprocess'] + results.speed['inference'] + results.speed['postprocess']
+        time_per_face = total_time / len(all_boxes)
         filtered_boxes = all_boxes[confidences >= conf_threshold]
-        used_time = (time.time() - start) * 1000  # milliseconds
-
-        return filtered_boxes, used_time
+        return filtered_boxes, time_per_face
 
     except Exception as e:
         raise RuntimeError(f"Failed to extract bounding boxes: {e}")

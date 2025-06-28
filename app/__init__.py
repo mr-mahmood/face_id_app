@@ -4,7 +4,7 @@ from .yolo import detect_faces
 from .utils import start_add_refrence_images, load_faiss
 from .enroll_user import add_reference_image
 from .faiss_search import faiss_search
-from .recognizer import get_id
+from .get_id import get_id
 
 __all__ = [
     "crop_face", "resize_face", "embbeding_face", 

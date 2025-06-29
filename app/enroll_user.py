@@ -48,7 +48,6 @@ def add_reference_image(image: np.ndarray, new_id: str) -> dict:
         img_path = os.path.join(new_id_folder, img_name)
         os.makedirs(new_id_folder, exist_ok=True)
         cv2.imwrite(img_path, resized_face)
-        total_reference_number = len(os.listdir(new_id_folder))
 
         # === Embedding and Indexing ===
         embedding, emb_time = embbeding_face(resized_face)
@@ -63,7 +62,6 @@ def add_reference_image(image: np.ndarray, new_id: str) -> dict:
             "status": "success",
             "message": f"User '{new_id}' enrolled successfully.",
             "label": new_id,
-            "total_reference_number": total_reference_number
         }
 
     except Exception as e:

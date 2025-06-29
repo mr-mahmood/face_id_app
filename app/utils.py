@@ -1,6 +1,9 @@
 import os
 import faiss
 import pickle
+import numpy as np
+import cv2
+from fastapi import UploadFile, HTTPException, status
 
 from app.config import FAISS_INDEX_PATH, LABELS_PATH, EMBEDDING_DIM, DATASET_DIR
 
@@ -87,3 +90,27 @@ def load_faiss():
 
     except Exception as e:
         raise RuntimeError(f"Failed to load faiss and labels: {e}")
+
+async def read_image(image: UploadFile) -> np.ndarray | None:
+    """
+    Reads and decodes an image from an UploadFile object.
+
+    Parameters
+    ----------
+    image : UploadFile
+        The uploaded image file.
+
+    Returns
+    -------
+    np.ndarray | None
+        Decoded image array, or None if decoding fails.
+    """
+    try:
+        image_bytes = await image.read()
+        np_arr = np.frombuffer(image_bytes, np.uint8)
+        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+        return img if img is not None else None
+    except Exception as e:
+        print(f"[read_image] Error reading image: {e}")
+        return None

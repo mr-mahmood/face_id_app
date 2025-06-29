@@ -21,7 +21,7 @@ def get_id(image: np.ndarray) -> dict:
         A dictionary containing the recognition result with status and message in it as well
         
         Recognition result for the most confident face detected in results["faces"]. Contains:
-            - status: str - ok / error
+            - status: str - success / error
             - label: str - predicted identity or 'unknown'
             - confidence: float - scaled vote score
             - bounding_box - bounding_box of face
@@ -55,7 +55,7 @@ def get_id(image: np.ndarray) -> dict:
             all_result.append(result)
 
         return {
-            "status": "ok",
+            "status": "success",
             "message": f"{len(boxes)} face(s) processed.",
             "faces": all_result
         }

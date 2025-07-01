@@ -4,9 +4,11 @@ import cv2
 import numpy as np
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
+from app.config import CLIENT_FOLDER
 from app import detect_faces, resize_face, crop_face, faiss_search, embbeding_face
 
-def get_id(image: np.ndarray) -> dict:
+def get_id(image: np.ndarray, organization_id: int) -> dict:
     """
     Perform face detection, embedding, and identity recognition on a given image.
 
@@ -28,6 +30,10 @@ def get_id(image: np.ndarray) -> dict:
             - total_time: float - total time for processing (ms)
     """
     try:
+
+        faiss_path = os.path.join(CLIENT_FOLDER, str(organization_id), "weights", f"client_{organization_id}.faiss")
+        label_path = os.path.join(CLIENT_FOLDER, str(organization_id), "weights", f"client_{organization_id}.pkl")
+
         boxes, detect_time = detect_faces(image)
         if len(boxes) == 0:
             return {
@@ -43,7 +49,7 @@ def get_id(image: np.ndarray) -> dict:
             cropped_face, _ = crop_face(image, box)
             resized_face, _ = resize_face(cropped_face, (112, 112))
             embedding, emb_time = embbeding_face(resized_face)
-            result = faiss_search(embedding)
+            result = faiss_search(embedding, faiss_path, label_path)
             total_time = (time.time() - start_total) * 1000
             total_time += detect_time
             result.update({
@@ -64,5 +70,5 @@ def get_id(image: np.ndarray) -> dict:
         return {
             "status": "error",
             "message": f"Unhandled error during face recognition: {str(e)}",
-            "faces": all_result
+            "faces": []
         }

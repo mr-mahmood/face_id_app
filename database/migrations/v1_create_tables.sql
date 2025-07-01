@@ -2,9 +2,7 @@
 -- Clients table: Organizations using your system
 CREATE TABLE clients (
     id SERIAL PRIMARY KEY,
-    organization_name TEXT NOT NULL,
-    faiss_label_path TEXT NOT NULL,
-    image_folder_path TEXT NOT NULL,
+    organization_name TEXT NOT NULL UNIQUE,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -12,8 +10,7 @@ CREATE TABLE clients (
 CREATE TABLE identities (
     id SERIAL PRIMARY KEY,
     client_id INTEGER REFERENCES clients(id) ON DELETE CASCADE,
-    full_name TEXT NOT NULL,
-    image_path TEXT NOT NULL,
+    full_name TEXT NOT NULL UNIQUE,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -34,8 +31,8 @@ CREATE TABLE access_logs  (
     camera_id INTEGER REFERENCES cameras(id) ON DELETE SET NULL,
     access_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     access_type TEXT NOT NULL, -- 'entry', 'exit'
-    detection_confidence REAL,
-    processing_time_ms REAL
+    detection_confidence REAL NOT NULL,
+    processing_time_ms REAL NOT NULL
 );
 
 -- Add indexes to improve foreign key lookup performance
@@ -43,4 +40,3 @@ CREATE INDEX idx_identities_client_id ON identities(client_id);
 CREATE INDEX idx_cameras_client_id ON cameras(client_id);
 CREATE INDEX idx_access_logs_identity_id ON access_logs(identity_id);
 CREATE INDEX idx_access_logs_camera_id ON access_logs(camera_id);
-CREATE INDEX idx_access_logs_access_time ON access_logs(access_time);

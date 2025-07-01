@@ -1,5 +1,5 @@
 from .identify import FaceInfo, IdentifyResponse
-from .enroll import EnrollResponse
+from .enroll import Enroll
 __all__ = [
-    "FaceInfo", "IdentifyResponse", "EnrollResponse"
+    "FaceInfo", "IdentifyResponse", "Enroll",
 ]

@@ -10,7 +10,7 @@ class FaceInfo(BaseModel):
     total_time: str
 
 class IdentifyResponse(BaseModel):
-    status: str                    # "ok" or "error"
+    status: str                    # "success" or "error"
     message: str                   # General description or error message
     faces: List[FaceInfo]          # List of recognized faces
 

@@ -7,7 +7,7 @@ from app import load_faiss
 VOTE_THRESHOLD = 0.75      # Adjust as needed
 DISTANCE_THRESHOLD = 0.7  # Lower means stricter match
 
-def faiss_search(embedding: np.ndarray, top_k: int = 10) -> dict:
+def faiss_search(embedding: np.ndarray, faiss_path, label_path, top_k: int = 10) -> dict:
     """
     Recognize identity based on input embedding using FAISS nearest neighbors.
 
@@ -34,7 +34,7 @@ def faiss_search(embedding: np.ndarray, top_k: int = 10) -> dict:
     """
     try:
         # Load index and labels
-        faiss_index, true_labels = load_faiss()
+        faiss_index, true_labels = load_faiss(faiss_path, label_path)
 
         if embedding.ndim == 1:
             embedding = np.expand_dims(embedding, axis=0).astype(np.float32)
@@ -53,7 +53,7 @@ def faiss_search(embedding: np.ndarray, top_k: int = 10) -> dict:
 
         if not valid_entries:
             return {
-                "status": "no_match",
+                "status": "unconfident",
                 "label": "unknown",
                 "confidence": 0.0
             }

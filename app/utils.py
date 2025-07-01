@@ -60,7 +60,7 @@ def start_add_refrence_images(label_id: str):
     except Exception as e:
         raise RuntimeError(f"Failed to initialize identity data for '{label_id}': {e}")
 
-def load_faiss():
+def load_faiss(faiss_path, label_path):
     """
     Load FAISS for identity.
 
@@ -79,9 +79,9 @@ def load_faiss():
     """
     try:
         # Load or initialize FAISS index and labels
-        if os.path.exists(FAISS_INDEX_PATH) and os.path.exists(LABELS_PATH):
-            index = faiss.read_index(FAISS_INDEX_PATH)
-            with open(LABELS_PATH, "rb") as f:
+        if os.path.exists(faiss_path) and os.path.exists(label_path):
+            index = faiss.read_index(faiss_path)
+            with open(label_path, "rb") as f:
                 labels = pickle.load(f)
         else:
             raise RuntimeError("Failed to load faiss and labels because it is not created yet.")

@@ -11,14 +11,12 @@ def embbeding_face(face: np.ndarray) -> tuple[np.ndarray, float]:
     Parameters
     ----------
     face : np.ndarray
-        A cropped RGB face image as a NumPy array.
-        Shape: (H, W, 3), dtype: uint8
+        A cropped face image as a NumPy array. Shape: (H, W, 3), dtype: uint8.
 
     Returns
     -------
     embedding : np.ndarray
-        The L2-normalized facial embedding vector.
-        Shape: (128,), dtype: float32 (assuming SFace returns 128-dim)
+        The L2-normalized facial embedding vector. Shape: (128,), dtype: float32.
 
     embed_time : float
         Time taken to generate the embedding in milliseconds.
@@ -30,6 +28,8 @@ def embbeding_face(face: np.ndarray) -> tuple[np.ndarray, float]:
     """
     try:
         start_embed = time.time()
+        if EMBEDDING_MODEL is None:
+            raise ValueError("EMBEDDING_MODEL is not set or is None")
         result = DeepFace.represent(img_path=face, model_name=EMBEDDING_MODEL, enforce_detection=False)[0]
         embedding = normalize(np.array(result["embedding"]).astype(np.float32))
         embed_time = (time.time() - start_embed) * 1000  # milliseconds

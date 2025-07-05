@@ -4,28 +4,28 @@ import numpy as np
 
 def detect_faces(image: np.ndarray, conf_threshold: float = 0.7) -> tuple[np.ndarray, float]:
     """
-    Detect faces in a given RGB image using YOLO and filter by confidence.
+    Detect faces in an image using YOLO model and filter by confidence threshold.
 
     Parameters
     ----------
     image : np.ndarray
-        RGB image as NumPy array, shape (H, W, 3), dtype: uint8.
+        Input image in BGR format. Shape: (H, W, 3), dtype: uint8.
 
     conf_threshold : float, optional
-        Minimum confidence required to accept a detection (default: 0.5).
+        Minimum confidence threshold for face detection. Default: 0.7.
 
     Returns
     -------
     boxes : np.ndarray
-        Bounding boxes as (N, 4) array: [x1, y1, x2, y2].
+        Bounding boxes of detected faces. Shape: (N, 4), format: [x1, y1, x2, y2].
 
     used_time : float
-        Inference time in milliseconds.
+        Average inference time per detected face in milliseconds.
 
     Raises
     ------
     RuntimeError
-        If detection or post-processing fails.
+        If face detection or post-processing fails.
     """
     try:
         model = get_model()

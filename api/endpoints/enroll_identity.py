@@ -13,32 +13,37 @@ async def enroll_identity(
     organization_name: str = Form(...),
 ):
     """
-    Enroll a face image for a given identity.
+    Enroll a new identity/person in an organization for face recognition.
 
-    This endpoint receives a face image and an identity ID, processes the image 
-    (detects face, extracts embedding), and stores it as a reference for later 
-    identification.
+    This endpoint creates a new identity record in the database for a specific
+    organization and sets up the directory structure for storing reference images
+    for that identity. The identity can then be used for face recognition.
 
     Parameters
     ----------
-    id : str
-        The identifier to associate with the uploaded face image.
-        Example: "id_mahmood"
-
-    image : UploadFile
-        The image file containing a face to enroll.
-        Supported formats: JPEG, PNG.
+    identity_name : str
+        Full name of the person to enroll in the organization.
+    
+    organization_name : str
+        Name of the organization the identity belongs to. Will be converted to lowercase.
 
     Returns
     -------
-    EnrollResponse : dict
-        A response indicating success or failure:
-        - status: "success" or "error"
-        - message: Explanation of the result
+    Enroll
+        Response containing:
+        - status: str - "success" or "error"
+        - message: str - Description of enrollment result or error details
+
+    Raises
+    ------
+    HTTPException
+        If organization doesn't exist, identity already exists, or database operation fails.
     """
     try:
         organization_name = organization_name.lower()
         pool = await get_pool()
+        if pool is None:
+            raise ValueError("Database connection pool is not available")
 
         async with pool.acquire() as conn:
             row = await conn.fetchrow("""
@@ -58,8 +63,8 @@ async def enroll_identity(
             row = await conn.fetchrow("""
                 SELECT id 
                 FROM identities 
-                WHERE full_name = $1
-            """, identity_name)
+                WHERE full_name = $1 and client_id = $2
+            """, identity_name, int(organization_id))
         
         if row is not None:
             return JSONResponse(status_code=400, content={
@@ -75,6 +80,9 @@ async def enroll_identity(
             """, int(organization_id), identity_name)
 
         identity_id = str(row["id"])
+        if CLIENT_FOLDER is None:
+            raise ValueError("CLIENT_FOLDER environment variable is not set")
+        
         os.makedirs(os.path.join(CLIENT_FOLDER, organization_id, "images", identity_id), exist_ok=True)
 
         return Enroll(

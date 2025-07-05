@@ -9,37 +9,48 @@ router = APIRouter()
 @router.post("/enroll_camera", response_model=Enroll)
 async def enroll_identity(
     organization_name: str = Form(...),
-    roll: str = Form(...),
     gate: str = Form(...),
+    roll: str = Form(...),
     location: Optional[str] = Form(None),
 ):
     """
-    Enroll a face image for a given identity.
+    Enroll a camera for an organization at a specific gate and role.
 
-    This endpoint receives a face image and an identity ID, processes the image 
-    (detects face, extracts embedding), and stores it as a reference for later 
-    identification.
+    This endpoint creates a new camera record in the database for a specific
+    organization, gate, and role (entry/exit). The camera can then be used
+    for face identification and access logging.
 
     Parameters
     ----------
-    id : str
-        The identifier to associate with the uploaded face image.
-        Example: "id_mahmood"
-
-    image : UploadFile
-        The image file containing a face to enroll.
-        Supported formats: JPEG, PNG.
+    organization_name : str
+        Name of the organization the camera belongs to. Will be converted to lowercase.
+    
+    roll : str
+        Camera role, must be either "entry" or "exit".
+    
+    gate : str
+        Gate identifier where the camera is located (e.g., "Main Gate", "North Gate").
+    
+    location : str, optional
+        Physical location description of the camera. Default: None.
 
     Returns
     -------
-    EnrollResponse : dict
-        A response indicating success or failure:
-        - status: "success" or "error"
-        - message: Explanation of the result
+    Enroll
+        Response containing:
+        - status: str - "success" or "error"
+        - message: str - Description of enrollment result or error details
+
+    Raises
+    ------
+    HTTPException
+        If organization doesn't exist, camera already exists, or database operation fails.
     """
     try:
         organization_name = organization_name.lower()
         pool = await get_pool()
+        if pool is None:
+            raise ValueError("Database connection pool is not available")
 
         async with pool.acquire() as conn:
             row = await conn.fetchrow("""
@@ -81,7 +92,6 @@ async def enroll_identity(
         )
 
     except Exception as e:
-        print(e)
         return JSONResponse(status_code=500, content={
             "status": "error",
             "message": "Internal server error during enrollment.",

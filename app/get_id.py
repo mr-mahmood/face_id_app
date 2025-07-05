@@ -8,29 +8,43 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 from app.config import CLIENT_FOLDER
 from app import detect_faces, resize_face, crop_face, faiss_search, embbeding_face
 
-def get_id(image: np.ndarray, organization_id: int) -> dict:
+async def get_id(image: np.ndarray, organization_id: int) -> dict:
     """
-    Perform face detection, embedding, and identity recognition on a given image.
+    Perform complete face detection, embedding, and identity recognition pipeline.
 
     Parameters
     ----------
     image : np.ndarray
-        Input image in BGR format as read by OpenCV.
+        Input image in BGR format. Shape: (H, W, 3), dtype: uint8.
+
+    organization_id : int
+        Organization ID to search against their specific FAISS index.
 
     Returns
     -------
     results : dict
-        A dictionary containing the recognition result with status and message in it as well
-        
-        Recognition result for the most confident face detected in results["faces"]. Contains:
-            - status: str - success / error
-            - label: str - predicted identity or 'unknown'
-            - confidence: float - scaled vote score
-            - bounding_box - bounding_box of face
-            - total_time: float - total time for processing (ms)
+        Complete recognition results containing:
+        - status: str - "success" or "error"
+        - message: str - Description of results or error
+        - faces: list - List of face recognition results, each containing:
+            - status: str - "ok" or "unconfident"
+            - label: str - Predicted identity or "unknown"
+            - confidence: float - Recognition confidence score
+            - bounding_box: tuple - Face coordinates (x1, y1, x2, y2)
+            - detection_time: str - Face detection processing time
+            - embbeding_time: str - Feature extraction time
+            - total_time: str - Total processing time
+
+    Raises
+    ------
+    RuntimeError
+        If any step in the pipeline fails.
     """
     try:
 
+        if CLIENT_FOLDER is None:
+            raise ValueError("CLIENT_FOLDER is not set or is None")
+        
         faiss_path = os.path.join(CLIENT_FOLDER, str(organization_id), "weights", f"client_{organization_id}.faiss")
         label_path = os.path.join(CLIENT_FOLDER, str(organization_id), "weights", f"client_{organization_id}.pkl")
 
@@ -49,7 +63,7 @@ def get_id(image: np.ndarray, organization_id: int) -> dict:
             cropped_face, _ = crop_face(image, box)
             resized_face, _ = resize_face(cropped_face, (112, 112))
             embedding, emb_time = embbeding_face(resized_face)
-            result = faiss_search(embedding, faiss_path, label_path)
+            result = await faiss_search(embedding, faiss_path, label_path)
             total_time = (time.time() - start_total) * 1000
             total_time += detect_time
             result.update({

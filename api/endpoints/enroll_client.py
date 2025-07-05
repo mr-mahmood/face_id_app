@@ -12,26 +12,35 @@ async def enroll_client(
     organization_name: str = Form(...),
 ):
     """
-    Enroll a client.
+    Enroll a new organization/client in the face recognition system.
 
-    This endpoint receives a client name and stores it as a clients for later identification.
+    This endpoint creates a new organization record in the database and sets up
+    the necessary directory structure for storing organization-specific data
+    including FAISS indices, reference images, and weights.
 
     Parameters
     ----------
-    name : str
-        The client company name.
-        Example: "university of tehran"
+    organization_name : str
+        Name of the organization to enroll. Will be converted to lowercase.
 
     Returns
     -------
-    EnrollClientesponse : dict
-        A response indicating success or failure:
-        - status: "success" or "error"
-        - message: Explanation of the result
+    Enroll
+        Response containing:
+        - status: str - "success" or "error"
+        - message: str - Description of enrollment result or error details
+
+    Raises
+    ------
+    HTTPException
+        If organization already exists or database operation fails.
     """
     try:
         name = organization_name.lower()
         pool = await get_pool()
+        if pool is None:
+            raise ValueError("Database connection pool is not available")
+
         async with pool.acquire() as conn:
             row = await conn.fetchrow("""
                 SELECT id 
@@ -53,6 +62,9 @@ async def enroll_client(
             """, name)
 
         client_id = str(row["id"])
+        if CLIENT_FOLDER is None:
+            raise ValueError("CLIENT_FOLDER environment variable is not set")
+        
         os.makedirs(os.path.join(CLIENT_FOLDER, client_id), exist_ok=True)
         os.makedirs(os.path.join(CLIENT_FOLDER, client_id, "weights"), exist_ok=True)
         os.makedirs(os.path.join(CLIENT_FOLDER, client_id, "images"), exist_ok=True)

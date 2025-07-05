@@ -4,28 +4,28 @@ import cv2
 
 def resize_face(face: np.ndarray, size=(160, 160)) -> tuple[np.ndarray, float]:
     """
-    resize a face region from the frame.
+    Resize a face image to the specified dimensions for embedding model input.
 
     Parameters
     ----------
     face : np.ndarray
-        Original face frame. Shape: (H, W, 3), dtype: uint8.
+        Input face image. Shape: (H, W, 3), dtype: uint8.
 
-    size : tuple
-        Target size (width, height) for the face embedding model (default: 160x160).
+    size : tuple, optional
+        Target size (width, height) for the face embedding model. Default: (160, 160).
 
     Returns
     -------
     face_resized : np.ndarray
-        Resized face image. Shape: (160, 160, 3)
+        Resized face image. Shape: (size[1], size[0], 3), dtype: uint8.
 
     resize_time : float
-        Time taken for crop and resize in milliseconds.
+        Time taken for resize operation in milliseconds.
 
     Raises
     ------
     RuntimeError
-        If resize face fails.
+        If resize operation fails.
     """
     try:
         start = time.time()
@@ -39,7 +39,7 @@ def resize_face(face: np.ndarray, size=(160, 160)) -> tuple[np.ndarray, float]:
 
 def crop_face(frame: np.ndarray, box) -> tuple[np.ndarray, float]:
     """
-    Crop a face region from the frame.
+    Crop a face region from the input frame using bounding box coordinates.
 
     Parameters
     ----------
@@ -47,20 +47,20 @@ def crop_face(frame: np.ndarray, box) -> tuple[np.ndarray, float]:
         Original image frame in BGR format. Shape: (H, W, 3), dtype: uint8.
 
     box : list or np.ndarray
-        Face bounding box [x1, y1, x2, y2] as pixel coordinates.
+        Face bounding box coordinates [x1, y1, x2, y2] as pixel coordinates.
 
     Returns
     -------
-    face_rgb: np.ndarray
-        Cropped face image in RGB format. Shape: (160, 160, 3)
+    face_cropped : np.ndarray
+        Cropped face image in BGR format. Shape: (y2-y1, x2-x1, 3), dtype: uint8.
 
     crop_time : float
-        Time taken for crop and resize in milliseconds.
+        Time taken for crop operation in milliseconds.
     
     Raises
     ------
     RuntimeError
-        If crop face fails.
+        If crop operation fails.
     """
     try:
         start = time.time()
@@ -78,17 +78,17 @@ def crop_face(frame: np.ndarray, box) -> tuple[np.ndarray, float]:
 
 def normalize(embedding: np.ndarray) -> np.ndarray:
     """
-    Normalize a face embedding vector using L2 norm.
+    Normalize a face embedding vector using L2 norm for consistent similarity calculations.
 
     Parameters
     ----------
     embedding : np.ndarray
-        A 1D face embedding vector (e.g., shape: (128,) or (512,)), dtype: float32 or float64.
+        A 1D face embedding vector. Shape: (N,), dtype: float32 or float64.
 
     Returns
     -------
     normalized : np.ndarray
-        L2-normalized embedding vector of the same shape and dtype as input.
+        L2-normalized embedding vector. Shape: (N,), same dtype as input.
 
     Raises
     ------

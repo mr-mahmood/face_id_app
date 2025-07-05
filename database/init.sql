@@ -10,8 +10,9 @@ CREATE TABLE clients (
 CREATE TABLE identities (
     id SERIAL PRIMARY KEY,
     client_id INTEGER REFERENCES clients(id) ON DELETE CASCADE,
-    full_name TEXT NOT NULL UNIQUE,
-    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    full_name TEXT NOT NULL,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (client_id, full_name)
 );
 
 -- Cameras table: Cameras assigned to gates for each client

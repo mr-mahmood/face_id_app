@@ -19,32 +19,44 @@ async def identify_image(
     image: UploadFile = File(...)
 ):
     """
-    Identify faces in an uploaded image and return their associated identities.
+    Identify faces in an uploaded image and log access events.
 
-    This endpoint accepts an image, detects all faces, extracts their embeddings, 
-    and matches them against the reference database using FAISS. Returns a list 
-    of identities with confidence scores and timing info per face.
+    This endpoint performs face detection, recognition, and access logging for
+    a specific organization and camera location. It validates the organization
+    and camera exist, processes the image through the face recognition pipeline,
+    and logs successful identifications to the access logs.
 
     Parameters
     ----------
-    company_id : str
-        The identifier for the company submitting the image (for future multi-tenant support).
-
-    camera_id : str
-        Identifier of the camera from which the image was captured.
-
+    organization_name : str
+        Name of the organization to search against.
+    
+    camera_gate : str
+        Gate identifier where the camera is located.
+    
+    camera_roll : str
+        Camera role ("entry" or "exit") for access logging.
+    
     image : UploadFile
-        Image file containing one or more faces. Supported formats: JPEG, PNG.
+        Image file containing faces to identify. Supported formats: JPEG, PNG.
 
     Returns
     -------
     IdentifyResponse
-        Response model containing:
-        - status: "success" or "error"
-        - message: Explanation or error details
-        - faces: List of detected faces with label, confidence, and processing times
+        Response containing:
+        - status: str - "success" or "error"
+        - message: str - Description of results or error details
+        - faces: List[FaceInfo] - List of identified faces with confidence scores
+
+    Raises
+    ------
+    HTTPException
+        If organization or camera not found, or image processing fails.
     """
     pool = await get_pool()
+    if pool is None:
+        raise ValueError("Database connection pool is not available")
+
     async with pool.acquire() as conn:
         row = await conn.fetchrow("""
             SELECT id
@@ -83,7 +95,7 @@ async def identify_image(
             "faces": []
         })
 
-    result = get_id(img, organization_id)
+    result = await get_id(img, organization_id)
     if result["status"] != "success":
         return JSONResponse(status_code=500, content=result["message"])
 

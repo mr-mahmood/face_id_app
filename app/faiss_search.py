@@ -2,35 +2,42 @@ import time
 import numpy as np
 
 from app import load_faiss
+from database.connection import get_pool
 
 # Define thresholds
 VOTE_THRESHOLD = 0.75      # Adjust as needed
 DISTANCE_THRESHOLD = 0.7  # Lower means stricter match
 
-def faiss_search(embedding: np.ndarray, faiss_path, label_path, top_k: int = 10) -> dict:
+async def faiss_search(embedding: np.ndarray, faiss_path, label_path, top_k: int = 10) -> dict:
     """
-    Recognize identity based on input embedding using FAISS nearest neighbors.
+    Perform face identity recognition using FAISS nearest neighbor search with weighted voting.
 
     Parameters
     ----------
     embedding : np.ndarray
-        1D normalized face embedding vector (shape: (128,))
+        1D normalized face embedding vector. Shape: (128,), dtype: float32.
     
-    top_k : int
-        Number of nearest neighbors to consider for voting.
+    faiss_path : str
+        Path to the FAISS index file.
+    
+    label_path : str
+        Path to the labels pickle file.
+    
+    top_k : int, optional
+        Number of nearest neighbors to consider for voting. Default: 10.
 
     Returns
     -------
     result : dict
-        {
+        Recognition result containing:
+        - status: str - "ok" if confident, "unconfident" if below threshold
+        - label: str - predicted identity name or "unknown"
+        - confidence: float - weighted voting confidence score (0.0 - 1.0)
 
-            "status": str,
-
-            "label": str,
-
-            "confidence": float
-
-        }
+    Raises
+    ------
+    RuntimeError
+        If FAISS search or voting process fails.
     """
     try:
         # Load index and labels
@@ -73,8 +80,20 @@ def faiss_search(embedding: np.ndarray, faiss_path, label_path, top_k: int = 10)
         # --- Confidence Decision ---
         confidence = vote_ratio
         is_confident = vote_ratio >= VOTE_THRESHOLD
-        
-        label_text = pred_label.replace("id_", "").replace("_", " ")
+        pool = await get_pool()
+        if pool is None:
+            raise ValueError("Database connection pool is not available")
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow("""
+                SELECT full_name 
+                FROM identities 
+                WHERE id = $1
+            """, pred_label)
+            if row:
+                label_text = row["full_name"]
+            else:
+                label_text = "unknown"
+
         return {
             "status": "ok" if is_confident else "unconfident",
             "label": label_text,

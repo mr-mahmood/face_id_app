@@ -3,79 +3,33 @@ import faiss
 import pickle
 import numpy as np
 import cv2
-from fastapi import UploadFile, HTTPException, status
-
-from app.config import FAISS_INDEX_PATH, LABELS_PATH, EMBEDDING_DIM, DATASET_DIR
-
-def start_add_refrence_images(label_id: str):
-    """
-    Initialize directories and FAISS index for a new reference identity.
-
-    This function:
-    - Ensures dataset and FAISS directories exist
-    - Creates a folder for the new identity under the dataset
-    - Loads or creates a FAISS index for storing face embeddings
-    - Loads or initializes the list of corresponding labels
-
-    Parameters
-    ----------
-    label_id : str
-        The identity name (label) used to create a subfolder and associate with embeddings.
-
-    Returns
-    -------
-    index : faiss.IndexFlatIP
-        FAISS index object (either newly created or loaded from disk).
-
-    labels : list[str]
-        List of identity labels corresponding to each embedding in the FAISS index.
-
-    person_folder : str
-        Absolute path to the identity's dataset folder.
-
-    Raises
-    ------
-    RuntimeError
-        If any directory or file operations fail.
-    """
-    try:
-        # Ensure all directories exist
-        os.makedirs(DATASET_DIR, exist_ok=True)
-        os.makedirs(os.path.dirname(FAISS_INDEX_PATH), exist_ok=True)
-        person_folder = os.path.join(DATASET_DIR, f"id_{label_id}")
-        os.makedirs(person_folder, exist_ok=True)
-
-
-        # Load or initialize FAISS index and labels
-        if os.path.exists(FAISS_INDEX_PATH) and os.path.exists(LABELS_PATH):
-            index = faiss.read_index(FAISS_INDEX_PATH)
-            with open(LABELS_PATH, "rb") as f:
-                labels = pickle.load(f)
-        else:
-            index = faiss.IndexFlatIP(EMBEDDING_DIM)
-            labels = []
-
-        return index, labels, person_folder
-
-    except Exception as e:
-        raise RuntimeError(f"Failed to initialize identity data for '{label_id}': {e}")
+from fastapi import UploadFile
+from app.config import EMBEDDING_DIM
 
 def load_faiss(faiss_path, label_path):
     """
-    Load FAISS for identity.
+    Load or initialize FAISS index and labels for face similarity search.
+
+    Parameters
+    ----------
+    faiss_path : str
+        Path to the FAISS index file.
+
+    label_path : str
+        Path to the labels pickle file.
 
     Returns
     -------
     index : faiss.IndexFlatIP
-        FAISS index object (either newly created or loaded from disk).
+        FAISS index object for inner product similarity search.
 
-    labels : list[str]
+    labels : list
         List of identity labels corresponding to each embedding in the FAISS index.
 
     Raises
     ------
     RuntimeError
-        If fail to load labels or faiss.
+        If fail to load or initialize FAISS index and labels.
     """
     try:
         # Load or initialize FAISS index and labels
@@ -84,7 +38,11 @@ def load_faiss(faiss_path, label_path):
             with open(label_path, "rb") as f:
                 labels = pickle.load(f)
         else:
-            raise RuntimeError("Failed to load faiss and labels because it is not created yet.")
+            index = faiss.IndexFlatIP(EMBEDDING_DIM)   
+            faiss.write_index(index, faiss_path)
+            labels = []
+            with open(label_path, "wb") as f:
+                pickle.dump(labels, f)
 
         return index, labels
 
@@ -93,17 +51,18 @@ def load_faiss(faiss_path, label_path):
 
 async def read_image(image: UploadFile) -> np.ndarray | None:
     """
-    Reads and decodes an image from an UploadFile object.
+    Read and decode an image from an UploadFile object to numpy array.
 
     Parameters
     ----------
     image : UploadFile
-        The uploaded image file.
+        The uploaded image file from FastAPI.
 
     Returns
     -------
     np.ndarray | None
-        Decoded image array, or None if decoding fails.
+        Decoded image array in BGR format, or None if decoding fails.
+        Shape: (H, W, 3), dtype: uint8.
     """
     try:
         image_bytes = await image.read()

@@ -9,11 +9,12 @@ router = APIRouter()
 @router.get("/admin/clients", response_model=ClientsInfoResponse)
 async def get_all_clients():
     """
-    Retrieve all enrolled organizations/clients from the database.
+    Retrieve all enrolled organizations/clients from the database for administrative purposes.
 
     This endpoint fetches all organization records from the database and returns
     them in a standardized format. Used for administrative purposes to view
-    all organizations in the system.
+    all organizations in the system. All data is converted to strings for
+    consistent JSON serialization, including UUIDs and timestamps.
 
     Returns
     -------
@@ -21,11 +22,20 @@ async def get_all_clients():
         Response containing:
         - status: str - "success"
         - clients: List[dict] - List of all organizations with their details
+          Each client dict contains all database fields converted to strings
 
     Raises
     ------
-    HTTPException
-        If database connection fails or query execution fails.
+    ValueError
+        If database connection pool is not available.
+    
+    Notes
+    -----
+    - This is an admin endpoint for system administration
+    - All database field values are converted to strings for JSON compatibility
+    - Returns complete organization information including UUIDs, names, and timestamps
+    - No authentication required (admin endpoint)
+    - Useful for monitoring and managing all enrolled organizations
     """
     pool = await get_pool()
     if pool is None:

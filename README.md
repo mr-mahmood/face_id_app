@@ -123,28 +123,28 @@ Once running, visit:
 ### Database Schema Details
 
 #### Clients Table
-- `id`: Primary key (SERIAL)
+- `id`: Primary key (UUID)
 - `organization_name`: Unique organization identifier
 - `created_at`: Timestamp of enrollment
 
 #### Identities Table
-- `id`: Primary key (SERIAL)
-- `client_id`: Foreign key to clients table
+- `id`: Primary key (UUID)
+- `client_id`: Foreign key to clients table (UUID)
 - `full_name`: Person's full name (unique per client)
 - `created_at`: Timestamp of enrollment
 
 #### Cameras Table
-- `id`: Primary key (SERIAL)
-- `client_id`: Foreign key to clients table
+- `id`: Primary key (UUID)
+- `client_id`: Foreign key to clients table (UUID)
 - `gate`: Gate identifier (e.g., "Main Gate", "North Gate")
 - `roll`: Camera role ("entry" or "exit")
 - `camera_location`: Physical location description
 - `created_at`: Timestamp of enrollment
 
 #### Access Logs Table
-- `id`: Primary key (SERIAL)
-- `identity_id`: Foreign key to identities table
-- `camera_id`: Foreign key to cameras table
+- `id`: Primary key (UUID)
+- `identity_id`: Foreign key to identities table (UUID)
+- `camera_id`: Foreign key to cameras table (UUID)
 - `access_time`: Timestamp of access event
 - `detection_confidence`: Confidence score of face recognition
 - `processing_time_ms`: Total processing time in milliseconds
@@ -271,7 +271,7 @@ curl -X POST "http://localhost:8000/api/identify" \
 
 ### 🔐 Security & Authentication (High Priority)
 - [ ] **API Key Management System**
-  - [ ] Generate secure API keys for organizations
+  - [x] Generate secure API keys for organizations
   - [ ] Store API key hashes in database
   - [ ] Validate API keys in middleware
   - [ ] API key rotation mechanism
@@ -315,6 +315,7 @@ curl -X POST "http://localhost:8000/api/identify" \
 
 ### 🗄️ Database & Data Management (High Priority)
 - [ ] **Database Migrations**
+  - [x] Add UUID instead of simple id
   - [ ] Migration system with version tracking
   - [ ] Rollback capabilities
   - [ ] Migration testing in CI/CD

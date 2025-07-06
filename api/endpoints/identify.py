@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, Form
+from fastapi import APIRouter, UploadFile, File, Form, Header
 from fastapi.responses import JSONResponse
 import numpy as np
 import cv2
@@ -11,29 +11,34 @@ router = APIRouter()
 
 @router.post("/identify", response_model=IdentifyResponse)
 async def identify_image(
-    organization_name: str = Form(...),
+    x_api_key: str = Header(...),
+    organization_id: str = Form(...),
     camera_gate: str = Form(...),
     camera_roll: str = Form(...),
     image: UploadFile = File(...)
 ):
     """
-    Identify faces in an uploaded image and log access events.
+    Identify faces in an uploaded image and log access events with API key authentication.
 
-    This endpoint performs face detection, recognition, and access logging for
-    a specific organization and camera location. It validates the organization
-    and camera exist, processes the image through the face recognition pipeline,
-    and logs successful identifications to the access logs.
+    This endpoint performs face detection, recognition, and access logging for a specific
+    organization and camera location. It validates the organization and camera exist,
+    processes the image through the face recognition pipeline, and logs successful
+    identifications to the access logs. API key authentication is required to ensure
+    only authorized organizations can perform identification.
 
     Parameters
     ----------
-    organization_name : str
-        Name of the organization to search against.
+    x_api_key : str
+        API key for authentication. Must match the organization's active API key.
+    
+    organization_id : str
+        UUID of the organization to search against.
     
     camera_gate : str
-        Gate identifier where the camera is located.
+        Gate identifier where the camera is located. Will be converted to lowercase.
     
     camera_roll : str
-        Camera role ("entry" or "exit") for access logging.
+        Camera role ("entry" or "exit") for access logging. Will be converted to lowercase.
     
     image : UploadFile
         Image file containing faces to identify. Supported formats: JPEG, PNG.
@@ -49,27 +54,64 @@ async def identify_image(
     Raises
     ------
     HTTPException
-        If organization or camera not found, or image processing fails.
+        If API key is invalid, organization doesn't exist, organization is inactive,
+        camera not found, or image processing fails.
+    
+    Notes
+    -----
+    - API key must be provided in the X-API-Key header
+    - Organization must be active (is_active = True) to perform identification
+    - Camera must be enrolled for the specified organization, gate, and role
+    - Face recognition uses FAISS index for fast similarity search
+    - Access logs are automatically created for each identified face
+    - Processing includes face detection, embedding, and similarity matching
+    - Confidence scores and processing times are recorded for each face
     """
+    camera_gate = camera_gate.lower()
+    camera_roll = camera_roll.lower()
     pool = await get_pool()
     if pool is None:
         raise ValueError("Database connection pool is not available")
 
     async with pool.acquire() as conn:
         row = await conn.fetchrow("""
-            SELECT id
-            FROM clients
-            WHERE organization_name = $1
-        """, organization_name)
-    
+            SELECT organization_name
+            FROM clients 
+            WHERE id = $1
+        """, organization_id)
+
+    if row is None:
+        return JSONResponse(status_code=400, content={
+            "status": "error",
+            "message": f"organization '{organization_id}' is not enrolled, please enroll organization and then try again",
+        })
+    organization_name = row["organization_name"]
+
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow("""
+            SELECT api_key, is_active
+            FROM api_keys
+            WHERE client_id = $1
+            """, organization_id)
+
     if row is None:
         return JSONResponse(status_code=400, content={
             "status": "error",
             "message": f"organization '{organization_name}' is not enrolled, please enroll organization and then try again",
-            "faces": []
         })
-    organization_id = int(row["id"])
+    
+    if row["api_key"] != x_api_key: 
+        return JSONResponse(status_code=400, content={
+            "status": "error",
+            "message": f"invalid api key, please use the correct api key for organization '{organization_name}'",
+        })
 
+    if row["is_active"] == False:
+        return JSONResponse(status_code=400, content={
+            "status": "error",
+            "message": f"organization '{organization_name}' is not active, please activate organization and then try enroll cameras for that organization",
+        })
+    
     async with pool.acquire() as conn:
         row = await conn.fetchrow("""
             SELECT id

@@ -2,13 +2,14 @@ import os
 import time
 import cv2
 import numpy as np
+from typing import Union
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 from app.config import CLIENT_FOLDER
 from app import detect_faces, resize_face, crop_face, faiss_search, embbeding_face
 
-async def get_id(image: np.ndarray, organization_id: int) -> dict:
+async def get_id(image: np.ndarray, organization_id: Union[str, bytes]) -> dict:
     """
     Perform complete face detection, embedding, and identity recognition pipeline.
 
@@ -17,8 +18,8 @@ async def get_id(image: np.ndarray, organization_id: int) -> dict:
     image : np.ndarray
         Input image in BGR format. Shape: (H, W, 3), dtype: uint8.
 
-    organization_id : int
-        Organization ID to search against their specific FAISS index.
+    organization_id : Union[str, bytes]
+        Organization UUID to search against their specific FAISS index.
 
     Returns
     -------

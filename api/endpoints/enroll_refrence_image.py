@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, Form
+from fastapi import APIRouter, UploadFile, File, Form, Header
 from fastapi.responses import JSONResponse
 import faiss
 import pickle
@@ -16,22 +16,27 @@ router = APIRouter()
 
 @router.post("/enroll_refrence_iamge", response_model=Enroll)
 async def identify_image(
-    organization_name: str = Form(...),
+    x_api_key: str = Header(...),
+    organization_id: str = Form(...),
     identity_name: str = Form(...),
     image: UploadFile = File(...)
 ):
     """
-    Enroll a reference image for an existing identity in the organization.
+    Enroll a reference image for an existing identity with face detection and FAISS indexing.
 
-    This endpoint adds a reference image for an existing identity to improve
-    face recognition accuracy. It validates the organization and identity exist,
-    processes the image through face detection and embedding, and updates the
-    organization's FAISS index with the new reference.
+    This endpoint adds a reference image for an existing identity to improve face recognition
+    accuracy. It validates the organization and identity exist, processes the image through
+    face detection and embedding, and updates the organization's FAISS index with the new
+    reference. API key authentication is required to ensure only authorized organizations
+    can add reference images.
 
     Parameters
     ----------
-    organization_name : str
-        Name of the organization the identity belongs to.
+    x_api_key : str
+        API key for authentication. Must match the organization's active API key.
+    
+    organization_id : str
+        UUID of the organization the identity belongs to.
     
     identity_name : str
         Full name of the identity to add reference image for.
@@ -49,14 +54,61 @@ async def identify_image(
     Raises
     ------
     HTTPException
-        If organization or identity not found, or image processing fails.
+        If API key is invalid, organization or identity not found, organization is inactive,
+        image contains wrong number of faces, or image processing fails.
+    
+    Notes
+    -----
+    - API key must be provided in the X-API-Key header
+    - Organization must be active (is_active = True) to add reference images
+    - Image must contain exactly one face for enrollment
+    - Face is automatically cropped, resized, and embedded using ML models
+    - Reference image is saved with timestamp in organization's image directory
+    - FAISS index is updated with new face embedding for faster recognition
+    - Processing includes face detection, cropping, resizing, and embedding generation
     """
-    if not CLIENT_FOLDER:
-        raise ValueError("CLIENT_FOLDER is not set or is None")
-
     pool = await get_pool()
     if pool is None:
         raise ValueError("Database connection pool is not available")
+
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow("""
+            SELECT organization_name
+            FROM clients 
+            WHERE id = $1
+        """, organization_id)
+
+    if row is None:
+        return JSONResponse(status_code=400, content={
+            "status": "error",
+            "message": f"organization '{organization_id}' is not enrolled, please enroll organization and then try enroll reference images for that organization",
+        })
+    organization_name = row["organization_name"]
+
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow("""
+            SELECT api_key, is_active
+            FROM api_keys
+            WHERE client_id = $1
+            """, organization_id)
+
+    if row is None:
+        return JSONResponse(status_code=400, content={
+            "status": "error",
+            "message": f"organization '{organization_name}' is not enrolled, please enroll organization and then try enroll reference images for that organization",
+        })
+    
+    if row["api_key"] != x_api_key: 
+        return JSONResponse(status_code=400, content={
+            "status": "error",
+            "message": f"invalid api key, please use the correct api key for organization '{organization_name}'",
+        })
+
+    if row["is_active"] == False:
+        return JSONResponse(status_code=400, content={
+            "status": "error",
+            "message": f"organization '{organization_name}' is not active, please activate organization and then try enroll cameras for that organization",
+        })
 
     async with pool.acquire() as conn:
         row = await conn.fetchrow("""
@@ -70,7 +122,7 @@ async def identify_image(
             "status": "error",
             "message": f"organization '{organization_name}' is not enrolled, please enroll organization and then try again",
         })
-    organization_id = int(row["id"])
+    organization_id = row["id"]
 
     async with pool.acquire() as conn:
         row = await conn.fetchrow("""
@@ -82,7 +134,7 @@ async def identify_image(
     if row is None:
         return JSONResponse(status_code=400, content={
             "status": "error",
-            "message": f"identity '{identity_name}' is not in organization '{organization_name}'.",
+            "message": f"identity '{identity_name}' is not enrolled in organization '{organization_name}'.",
             "faces": []
         })
     identity_id = row["id"]
@@ -134,7 +186,7 @@ async def identify_image(
 
         return Enroll(
             status="success",
-            message=f"User '{identity_name}' enrolled successfully.",
+            message=f"User '{identity_name}' reference images, enrolled successfully.",
         )
 
     except Exception as e:

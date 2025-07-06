@@ -1,10 +1,7 @@
-from app.config import EMBEDDING_MODEL
-from app import normalize
-from deepface import DeepFace
 import numpy as np
-import time
+from app.model_manager import get_model_manager
 
-def embbeding_face(face: np.ndarray) -> tuple[np.ndarray, float]:
+async def embbeding_face(face: np.ndarray) -> tuple[np.ndarray, float]:
     """
     Generate a normalized facial embedding for a given face image using DeepFace.
 
@@ -27,13 +24,8 @@ def embbeding_face(face: np.ndarray) -> tuple[np.ndarray, float]:
         If embedding generation fails due to model or image issues.
     """
     try:
-        start_embed = time.time()
-        if EMBEDDING_MODEL is None:
-            raise ValueError("EMBEDDING_MODEL is not set or is None")
-        result = DeepFace.represent(img_path=face, model_name=EMBEDDING_MODEL, enforce_detection=False)[0]
-        embedding = normalize(np.array(result["embedding"]).astype(np.float32))
-        embed_time = (time.time() - start_embed) * 1000  # milliseconds
-        return embedding, embed_time
+        model_manager = await get_model_manager()
+        return model_manager.generate_embedding(face)
 
     except Exception as e:
         raise RuntimeError(f"Failed to extract embedding: {e}")

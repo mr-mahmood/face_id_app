@@ -102,7 +102,7 @@ async def identify_image(
         faiss_path = os.path.join(CLIENT_FOLDER, str(organization_id), "weights", f"client_{organization_id}.faiss")
         label_path = os.path.join(CLIENT_FOLDER, str(organization_id), "weights", f"client_{organization_id}.pkl")
         faiss_index, labels = load_faiss(faiss_path, label_path)
-        boxes, rec_time = detect_faces(img)
+        boxes, rec_time = await detect_faces(img)
 
         if len(boxes) != 1:
             return {
@@ -124,7 +124,7 @@ async def identify_image(
         cv2.imwrite(img_path, resized_face)
 
         # === Embedding and Indexing ===
-        embedding, emb_time = embbeding_face(resized_face)
+        embedding, emb_time = await embbeding_face(resized_face)
         faiss_index.add(x=np.expand_dims(embedding, axis=0))
         labels.append(identity_id)
 

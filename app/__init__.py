@@ -1,6 +1,6 @@
 from .preprocessor import crop_face, resize_face, normalize
 from .embedder import embbeding_face
-from .yolo import detect_faces
+from .yolo.detector import detect_faces
 from .utils import load_faiss, read_image
 from .faiss_search import faiss_search
 from .get_id import get_id

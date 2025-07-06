@@ -13,7 +13,8 @@ img = cv2.imread("./tests/recognizer_test.jpg")
 output = img.copy()
 
 # --- Call recognition pipeline
-results = get_id(img)
+import asyncio
+results = asyncio.run(get_id(img, 1))
 
 # --- Timing summary vars
 total_emb_time = 0

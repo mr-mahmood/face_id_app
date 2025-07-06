@@ -1,8 +1,8 @@
 import time
-from . import get_model
 import numpy as np
+from app.model_manager import get_model_manager
 
-def detect_faces(image: np.ndarray, conf_threshold: float = 0.7) -> tuple[np.ndarray, float]:
+async def detect_faces(image: np.ndarray, conf_threshold: float = 0.7) -> tuple[np.ndarray, float]:
     """
     Detect faces in an image using YOLO model and filter by confidence threshold.
 
@@ -28,14 +28,8 @@ def detect_faces(image: np.ndarray, conf_threshold: float = 0.7) -> tuple[np.nda
         If face detection or post-processing fails.
     """
     try:
-        model = get_model()
-        results = model(image, verbose=False)[0]
-        all_boxes = results.boxes.xyxy.cpu().numpy()
-        confidences = results.boxes.conf.cpu().numpy()
-        total_time = results.speed['preprocess'] + results.speed['inference'] + results.speed['postprocess']
-        time_per_face = total_time / len(all_boxes)
-        filtered_boxes = all_boxes[confidences >= conf_threshold]
-        return filtered_boxes, time_per_face
+        model_manager = await get_model_manager()
+        return model_manager.detect_faces(image, conf_threshold)
 
     except Exception as e:
         raise RuntimeError(f"Failed to extract bounding boxes: {e}")

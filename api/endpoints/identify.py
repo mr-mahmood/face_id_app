@@ -1,5 +1,3 @@
-# api/endpoints/identify.py
-
 from fastapi import APIRouter, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 import numpy as np

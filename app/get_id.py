@@ -48,7 +48,7 @@ async def get_id(image: np.ndarray, organization_id: int) -> dict:
         faiss_path = os.path.join(CLIENT_FOLDER, str(organization_id), "weights", f"client_{organization_id}.faiss")
         label_path = os.path.join(CLIENT_FOLDER, str(organization_id), "weights", f"client_{organization_id}.pkl")
 
-        boxes, detect_time = detect_faces(image)
+        boxes, detect_time = await detect_faces(image)
         if len(boxes) == 0:
             return {
                 "status": "error",
@@ -62,7 +62,7 @@ async def get_id(image: np.ndarray, organization_id: int) -> dict:
             x1, y1, x2, y2 = map(int, box)
             cropped_face, _ = crop_face(image, box)
             resized_face, _ = resize_face(cropped_face, (112, 112))
-            embedding, emb_time = embbeding_face(resized_face)
+            embedding, emb_time = await embbeding_face(resized_face)
             result = await faiss_search(embedding, faiss_path, label_path)
             total_time = (time.time() - start_total) * 1000
             total_time += detect_time

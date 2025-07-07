@@ -32,7 +32,7 @@ class TestFaceIDAPI:
     @pytest.fixture(scope="class")
     def organization_name(self):
         """Test organization name."""
-        return "temp14"
+        return "temp17"
     
     @pytest.fixture(scope="class")
     def client_data(self, base_url, organization_name):
@@ -44,8 +44,8 @@ class TestFaceIDAPI:
         }
 
         try:
-            print(f"Attempting to connect to: {base_url}/enroll_client")
-            response = requests.post(f"{base_url}/enroll_client", data=payload, timeout=10)
+            print(f"Attempting to connect to: {base_url}/enroll_organization")
+            response = requests.post(f"{base_url}/enroll_organization", data=payload, timeout=10)
             
             print(f"Response status code: {response.status_code}")
             print(f"Response headers: {dict(response.headers)}")
@@ -172,14 +172,14 @@ class TestFaceIDAPI:
         
         # Test data for camera enrollment
         camera_data = {
-            "organization_id": str(client_data["client_id"]),
             "gate": "Main Gate",
             "roll": "entry",
             "location": "Front entrance"
         }
         hashed_api_key = str(hashlib.sha256(client_data["api_key"].encode()).hexdigest())
         headers = {
-            "x-api-key": hashed_api_key
+            "x-organization-id": str(client_data["client_id"]),
+            "x-api-key": client_data["api_key"]
         }
         
         try:
@@ -222,12 +222,12 @@ class TestFaceIDAPI:
         
         # Test data for identity enrollment
         identity_data = {
-            "organization_id": client_data["client_id"],
             "identity_name": "John Doe"
         }
         hashed_api_key = str(hashlib.sha256(client_data["api_key"].encode()).hexdigest())
         headers = {
-            "x-api-key": hashed_api_key
+            "x-organization-id": client_data["client_id"],
+            "x-api-key": client_data["api_key"]
         }
         
         try:
@@ -279,12 +279,12 @@ class TestFaceIDAPI:
         }
         
         data = {
-            "organization_id": client_data["client_id"],
             "identity_name": "John Doe"
         }
         hashed_api_key = str(hashlib.sha256(client_data["api_key"].encode()).hexdigest())
         headers = {
-            "x-api-key": hashed_api_key
+            "x-organization-id": client_data["client_id"],
+            "x-api-key": client_data["api_key"]
         }
         
         try:
@@ -348,13 +348,13 @@ class TestFaceIDAPI:
         }
         
         data = {
-            "organization_id": client_data["client_id"],
             "camera_gate": "Main Gate",
             "camera_roll": "entry"
         }
         hashed_api_key = str(hashlib.sha256(client_data["api_key"].encode()).hexdigest())
         headers = {
-            "x-api-key": hashed_api_key
+            "x-organization-id": client_data["client_id"],
+            "x-api-key": client_data["api_key"]
         }
         
         try:
@@ -424,7 +424,7 @@ class TestFaceIDAPI:
         }
 
         try:
-            response = requests.post(f"{base_url}/enroll_client", data=payload)
+            response = requests.post(f"{base_url}/enroll_organization", data=payload)
             response_data = response.json()
             
             # Should return error for duplicate

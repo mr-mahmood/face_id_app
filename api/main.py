@@ -9,12 +9,16 @@ from api.endpoints.enroll_refrence_image import router as enroll_identity_refere
 from api.endpoints.clients import router as client_info_router
 from api.endpoints.model_status import router as model_status_router
 from database.connection import get_pool
+from api.middleware import api_key_middleware
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 from app import get_id
 
 app = FastAPI(title="Face ID API")
 db_pool = None
+
+# Add API key middleware
+app.middleware("http")(api_key_middleware)
 
 
 @app.on_event("startup")

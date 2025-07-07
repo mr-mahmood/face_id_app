@@ -6,18 +6,21 @@ import datetime
 import numpy as np
 import cv2
 import os
-
 from app.config import CLIENT_FOLDER
 from app import detect_faces, embbeding_face, crop_face, resize_face, load_faiss, read_image
 from api.models import Enroll
 from database.connection import get_pool
+from fastapi import APIRouter, UploadFile, Form, Request, Depends, Header
+from api.utils import get_organization_name_from_request
+from api.dependencies import get_api_key
 
 router = APIRouter()
 
 @router.post("/enroll_refrence_iamge", response_model=Enroll)
 async def identify_image(
-    x_api_key: str = Header(...),
-    organization_id: str = Form(...),
+    request: Request,
+    x_organization_id: str = Header(...),
+    x_api_key: str = Depends(get_api_key),
     identity_name: str = Form(...),
     image: UploadFile = File(...)
 ):
@@ -71,65 +74,16 @@ async def identify_image(
     if pool is None:
         raise ValueError("Database connection pool is not available")
 
-    async with pool.acquire() as conn:
-        row = await conn.fetchrow("""
-            SELECT organization_name
-            FROM clients 
-            WHERE id = $1
-        """, organization_id)
-
-    if row is None:
-        return JSONResponse(status_code=400, content={
-            "status": "error",
-            "message": f"organization '{organization_id}' is not enrolled, please enroll organization and then try enroll reference images for that organization",
-        })
-    organization_name = row["organization_name"]
-
-    async with pool.acquire() as conn:
-        row = await conn.fetchrow("""
-            SELECT api_key, is_active
-            FROM api_keys
-            WHERE client_id = $1
-            """, organization_id)
-
-    if row is None:
-        return JSONResponse(status_code=400, content={
-            "status": "error",
-            "message": f"organization '{organization_name}' is not enrolled, please enroll organization and then try enroll reference images for that organization",
-        })
-    
-    if row["api_key"] != x_api_key: 
-        return JSONResponse(status_code=400, content={
-            "status": "error",
-            "message": f"invalid api key, please use the correct api key for organization '{organization_name}'",
-        })
-
-    if row["is_active"] == False:
-        return JSONResponse(status_code=400, content={
-            "status": "error",
-            "message": f"organization '{organization_name}' is not active, please activate organization and then try enroll cameras for that organization",
-        })
-
-    async with pool.acquire() as conn:
-        row = await conn.fetchrow("""
-            SELECT id
-            FROM clients
-            WHERE organization_name = $1
-        """, organization_name)
-    
-    if row is None:
-        return JSONResponse(status_code=400, content={
-            "status": "error",
-            "message": f"organization '{organization_name}' is not enrolled, please enroll organization and then try again",
-        })
-    organization_id = row["id"]
+    # API key validation is now handled by middleware
+    # Get organization name from request state (set by middleware)
+    organization_name = get_organization_name_from_request(request)
 
     async with pool.acquire() as conn:
         row = await conn.fetchrow("""
             SELECT id
             FROM identities
             WHERE full_name = $1 and client_id = $2
-        """, identity_name, organization_id)
+        """, identity_name, x_organization_id)
     
     if row is None:
         return JSONResponse(status_code=400, content={
@@ -151,8 +105,8 @@ async def identify_image(
         if CLIENT_FOLDER is None:
             raise ValueError("CLIENT_FOLDER environment variable is not set")
         
-        faiss_path = os.path.join(CLIENT_FOLDER, str(organization_id), "weights", f"client_{organization_id}.faiss")
-        label_path = os.path.join(CLIENT_FOLDER, str(organization_id), "weights", f"client_{organization_id}.pkl")
+        faiss_path = os.path.join(CLIENT_FOLDER, str(x_organization_id), "weights", f"client_{x_organization_id}.faiss")
+        label_path = os.path.join(CLIENT_FOLDER, str(x_organization_id), "weights", f"client_{x_organization_id}.pkl")
         faiss_index, labels = load_faiss(faiss_path, label_path)
         boxes, rec_time = await detect_faces(img)
 
@@ -172,7 +126,7 @@ async def identify_image(
         # === Save reference image ===
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")
         img_name = f"{timestamp}.jpg"
-        img_path = os.path.join(CLIENT_FOLDER, str(organization_id), "images", str(identity_id), img_name)
+        img_path = os.path.join(CLIENT_FOLDER, str(x_organization_id), "images", str(identity_id), img_name)
         cv2.imwrite(img_path, resized_face)
 
         # === Embedding and Indexing ===

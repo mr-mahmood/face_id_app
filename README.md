@@ -272,8 +272,8 @@ curl -X POST "http://localhost:8000/api/identify" \
 ### 🔐 Security & Authentication (High Priority)
 - [ ] **API Key Management System**
   - [x] Generate secure API keys for organizations
-  - [ ] Store API key hashes in database
-  - [ ] Validate API keys in middleware
+  - [x] Store API key hashes in database
+  - [x] Validate API keys in middleware
   - [ ] API key rotation mechanism
 - [ ] **JWT Authentication**
   - [ ] User login/logout endpoints

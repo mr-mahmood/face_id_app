@@ -16,7 +16,7 @@ def __generate_api_key():
 
 router = APIRouter()
 
-@router.post("/enroll_client", response_model=OrganizationEnroll)
+@router.post("/enroll_organization", response_model=OrganizationEnroll)
 async def enroll_client(
     organization_name: str = Form(...),
 ):

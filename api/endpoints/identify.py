@@ -1,18 +1,19 @@
 from fastapi import APIRouter, UploadFile, File, Form, Header
 from fastapi.responses import JSONResponse
-import numpy as np
-import cv2
-
 from app import get_id, read_image
 from api.models import IdentifyResponse, FaceInfo
 from database.connection import get_pool
+from fastapi import APIRouter, UploadFile, Form, Request, Depends, Header
+from api.utils import get_organization_name_from_request
+from api.dependencies import get_api_key
 
 router = APIRouter()
 
 @router.post("/identify", response_model=IdentifyResponse)
 async def identify_image(
-    x_api_key: str = Header(...),
-    organization_id: str = Form(...),
+    request: Request,
+    x_organization_id: str = Header(...),
+    x_api_key: str = Depends(get_api_key),
     camera_gate: str = Form(...),
     camera_roll: str = Form(...),
     image: UploadFile = File(...)
@@ -73,51 +74,16 @@ async def identify_image(
     if pool is None:
         raise ValueError("Database connection pool is not available")
 
-    async with pool.acquire() as conn:
-        row = await conn.fetchrow("""
-            SELECT organization_name
-            FROM clients 
-            WHERE id = $1
-        """, organization_id)
-
-    if row is None:
-        return JSONResponse(status_code=400, content={
-            "status": "error",
-            "message": f"organization '{organization_id}' is not enrolled, please enroll organization and then try again",
-        })
-    organization_name = row["organization_name"]
-
-    async with pool.acquire() as conn:
-        row = await conn.fetchrow("""
-            SELECT api_key, is_active
-            FROM api_keys
-            WHERE client_id = $1
-            """, organization_id)
-
-    if row is None:
-        return JSONResponse(status_code=400, content={
-            "status": "error",
-            "message": f"organization '{organization_name}' is not enrolled, please enroll organization and then try again",
-        })
-    
-    if row["api_key"] != x_api_key: 
-        return JSONResponse(status_code=400, content={
-            "status": "error",
-            "message": f"invalid api key, please use the correct api key for organization '{organization_name}'",
-        })
-
-    if row["is_active"] == False:
-        return JSONResponse(status_code=400, content={
-            "status": "error",
-            "message": f"organization '{organization_name}' is not active, please activate organization and then try enroll cameras for that organization",
-        })
+    # API key validation is now handled by middleware
+    # Get organization name from request state (set by middleware)
+    organization_name = get_organization_name_from_request(request)
     
     async with pool.acquire() as conn:
         row = await conn.fetchrow("""
             SELECT id
             FROM cameras
             WHERE client_id = $1 and gate = $2 and roll = $3
-        """, organization_id, camera_gate, camera_roll)
+        """, x_organization_id, camera_gate, camera_roll)
     
     if row is None:
         return JSONResponse(status_code=400, content={
@@ -135,7 +101,7 @@ async def identify_image(
             "faces": []
         })
 
-    result = await get_id(img, organization_id)
+    result = await get_id(img, x_organization_id)
     if result["status"] != "success":
         return JSONResponse(status_code=500, content=result["message"])
 

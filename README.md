@@ -82,7 +82,7 @@ face_id_app/
 ### Start the application
 
 ```bash
-uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn api.main:app
 ```
 
 ### API Documentation
@@ -233,7 +233,7 @@ curl -X POST "http://localhost:8000/api/identify" \
 3. Create a virtual environment: `python -m venv venv && source venv/bin/activate`
 4. Install dependencies: `pip install -r requirements.txt`
 5. Set up development database and environment variables
-6. Run: `uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload`
+6. Run: `uvicorn api.main:app`
 7. go to this url: `http://127.0.0.1:8000/docs#/`
 
 ### Code Style
@@ -274,7 +274,7 @@ curl -X POST "http://localhost:8000/api/identify" \
   - [x] Generate secure API keys for organizations
   - [x] Store API key hashes in database
   - [x] Validate API keys in middleware
-  - [ ] API key rotation mechanism
+  - [x] API key rotation mechanism
 - [ ] **JWT Authentication**
   - [ ] User login/logout endpoints
   - [ ] JWT token generation and validation

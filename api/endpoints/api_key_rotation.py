@@ -1,11 +1,15 @@
-import os
+from fastapi import APIRouter, Header
+from fastapi.responses import JSONResponse
+from api.models.enroll import OrganizationEnroll
+from database.connection import get_pool
+from fastapi import APIRouter, UploadFile, Form, Request, Depends, Header
+from api.utils import get_organization_name_from_request
+from api.dependencies import get_api_key
+import secrets
 import hashlib
 import secrets
-from fastapi import APIRouter, Form
-from fastapi.responses import JSONResponse
-from api.models import OrganizationEnroll
-from database.connection import get_pool
-from app.config import CLIENT_FOLDER
+import hashlib
+from uuid import UUID
 
 def __hash_api_key(api_key):
     return hashlib.sha256(api_key.encode()).hexdigest()
@@ -16,9 +20,11 @@ def __generate_api_key():
 
 router = APIRouter()
 
-@router.post("/enroll_organization", response_model=OrganizationEnroll)
-async def enroll_client(
-    organization_name: str = Form(...),
+@router.post("/api_key_rotation", response_model=OrganizationEnroll)
+async def identify_image(
+    request: Request,
+    x_organization_id: str = Header(...),
+    x_api_key: str = Depends(get_api_key)
 ):
     """
     Enroll a new organization/client in the face recognition system with API key generation.
@@ -56,59 +62,31 @@ async def enroll_client(
     - If organization already exists, returns existing client_id with "unavailable" api_key
     """
     try:
-        name = organization_name.lower()
-        if len(name) <= 3:
-            return JSONResponse(status_code=400, content={
-                "status": "error",
-                "message": "Organization name must be at least 4 characters."
-            })
+        organization_name = get_organization_name_from_request(request)
 
         pool = await get_pool()
         if pool is None:
             raise ValueError("Database connection pool is not available")
-
-        async with pool.acquire() as conn:
-            row = await conn.fetchrow("""
-                SELECT id 
-                FROM clients 
-                WHERE organization_name = $1
-            """, name)
-
-        if row:
-            return OrganizationEnroll(
-                status="error",
-                message=f"client '{name}' already exist",
-                organization_id=row["id"],
-                api_key="unavailable",
-            )
     
-        async with pool.acquire() as conn:
-            row = await conn.fetchrow("""
-                INSERT INTO clients (organization_name) 
-                VALUES ($1)
-                RETURNING id
-            """, name)
-
-        client_id = row["id"]
-
+        old_hashed_api_key = __hash_api_key(x_api_key)
         api_key, hashed_api_key = __generate_api_key()
+        async with pool.acquire() as conn:
+            await conn.execute("""
+                UPDATE api_keys
+                SET is_active = false, last_used = CURRENT_TIMESTAMP
+                WHERE client_id = $1 AND api_key = $2 AND is_active = true
+            """, x_organization_id, old_hashed_api_key)
+
         async with pool.acquire() as conn:
             await conn.execute("""
                 INSERT INTO api_keys (client_id, api_key)
                 VALUES ($1, $2)
-            """, client_id, hashed_api_key)
-
-        if CLIENT_FOLDER is None:
-            raise ValueError("CLIENT_FOLDER environment variable is not set")
-        
-        os.makedirs(os.path.join(CLIENT_FOLDER, str(client_id)), exist_ok=True)
-        os.makedirs(os.path.join(CLIENT_FOLDER, str(client_id), "weights"), exist_ok=True)
-        os.makedirs(os.path.join(CLIENT_FOLDER, str(client_id), "images"), exist_ok=True)
+            """, x_organization_id, hashed_api_key)
 
         return OrganizationEnroll(
             status="success",
-            message=f"Client '{name}' added.",
-            organization_id=client_id,
+            message=f"Client '{organization_name}' get new api key.",
+            organization_id=UUID(x_organization_id),
             api_key=api_key,
         )
 

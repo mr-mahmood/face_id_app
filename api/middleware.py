@@ -1,8 +1,10 @@
 import hashlib
+from pickle import NONE
 from typing import Optional, Tuple
 from fastapi import Request, HTTPException, status
 from fastapi.responses import JSONResponse
 from database.connection import get_pool
+import uuid
 
 
 def hash_api_key(api_key: str) -> str:
@@ -56,45 +58,33 @@ async def validate_api_key(api_key: str, organization_id: str) -> Tuple[bool, st
             """, organization_id)
 
         if row is None:
-            return False, f"Organization '{organization_id}' is not enrolled", None
-        
+            return False, "None", f"Organization '{organization_id}' is not enrolled"
         organization_name = row["organization_name"]
-
-        # Get the stored API key hash and active status
-        async with pool.acquire() as conn:
-            row = await conn.fetchrow("""
-                SELECT api_key, is_active
-                FROM api_keys
-                WHERE client_id = $1
-            """, organization_id)
-
-        if row is None:
-            return False, f"Organization '{organization_name}' has no API key configured", None
-
-        stored_api_key_hash = row["api_key"]
-        is_active = row["is_active"]
-
-        if not is_active:
-            return False, f"Organization '{organization_name}' is not active", None
-
-        # Check if the provided API key matches (handle both plain text and hash)
+   
         provided_hash = hash_api_key(api_key)
-        
-        if provided_hash != stored_api_key_hash:
-            return False, f"Invalid API key for organization '{organization_name}'", None
-
-        # Update last_used timestamp
         async with pool.acquire() as conn:
-            await conn.execute("""
-                UPDATE api_keys 
-                SET last_used = CURRENT_TIMESTAMP
-                WHERE client_id = $1
-            """, organization_id)
+            rows = await conn.fetch("""
+                SELECT is_active
+                FROM api_keys
+                WHERE client_id = $1 AND api_key = $2
+            """, organization_id, provided_hash)
 
-        return True, organization_name, None
+        if not rows:
+            return False, organization_name, f"Invalid API key for organization '{organization_name}'"
+        elif any(row['is_active'] for row in rows):
+            # Update last_used timestamp
+            async with pool.acquire() as conn:
+                await conn.execute("""
+                    UPDATE api_keys 
+                    SET last_used = CURRENT_TIMESTAMP
+                    WHERE client_id = $1 AND api_key = $2 AND is_active = true
+                """, organization_id, provided_hash)
+            return True, organization_name, "API key is valid"
+        else:
+            return False, organization_name, f"Expired API key for organization '{organization_name}'. Please use the new api key."
 
     except Exception as e:
-        return False, f"Internal server error during API key validation: {str(e)}", None
+        return False, "None", f"Internal server error during API key validation: {str(e)}"
 
 
 async def api_key_middleware(request: Request, call_next):
@@ -133,7 +123,8 @@ async def api_key_middleware(request: Request, call_next):
         "/api/enroll_camera", 
         "/api/enroll_identity",
         "/api/enroll_refrence_iamge",
-        "/api/identify"
+        "/api/identify",
+        "/api/api_key_rotation"
     ]
     
     # Check if this is a protected endpoint
@@ -152,13 +143,12 @@ async def api_key_middleware(request: Request, call_next):
             
             # Get organization_id from form data or query params
             organization_id = None
-
             try:
                 organization_id = request.headers.get("x-organization-id")
             except:
                 print("No organization_id in form data")
                 pass
-            
+
             if not organization_id:
                 return JSONResponse(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -168,15 +158,25 @@ async def api_key_middleware(request: Request, call_next):
                     }
                 )
             
-            # Validate the API key
+            # Validate organization_id
+            try:
+                uuid.UUID(organization_id)
+            except Exception:
+                return JSONResponse(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    content={
+                        "status": "error",
+                        "message": "organization_id must be a valid UUID."
+                    }
+                )
+
             is_valid, result, error = await validate_api_key(api_key, organization_id)
-            
             if not is_valid:
                 return JSONResponse(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     content={
                         "status": "error",
-                        "message": result
+                        "message": error
                     }
                 )
             

@@ -8,5 +8,5 @@ class Enroll(BaseModel):
 class OrganizationEnroll(BaseModel):
     status: str                    # "success" or "error"
     message: str                   # General description or error message
-    client_id: UUID                 # Client ID
+    organization_id: UUID                 # Client ID
     api_key: str                   # API Key

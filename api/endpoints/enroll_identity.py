@@ -58,6 +58,13 @@ async def enroll_identity(
         if pool is None:
             raise ValueError("Database pool is not initialized")
         
+        identity_name = identity_name.lower()
+        if len(identity_name) <= 3:
+            return JSONResponse(status_code=400, content={
+                "status": "error",
+                "message": "Identity name must be at least 4 characters."
+            })
+
         # API key validation is now handled by middleware
         # Get organization name from request state (set by middleware)
         organization_name = get_organization_name_from_request(request)

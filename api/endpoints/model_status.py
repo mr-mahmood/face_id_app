@@ -5,7 +5,7 @@ from app.model_manager import get_model_manager
 
 router = APIRouter()
 
-@router.get("/model_status")
+@router.get("/admin/model_status")
 async def get_model_status() -> Dict[str, Any]:
     """
     Get status information about loaded ML models for system monitoring.

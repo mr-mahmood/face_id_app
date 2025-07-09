@@ -4,7 +4,7 @@ from app import get_id, read_image
 from api.models import IdentifyResponse, FaceInfo
 from database.connection import get_pool
 from fastapi import APIRouter, UploadFile, Form, Request, Depends, Header
-from api.utils import get_organization_name_from_request
+from api.utils import get_organization_name_from_request, validate_gate_and_roll
 from api.dependencies import get_api_key
 
 router = APIRouter()
@@ -68,6 +68,14 @@ async def identify_image(
     - Processing includes face detection, embedding, and similarity matching
     - Confidence scores and processing times are recorded for each face
     """
+    # Validate gate and roll
+    is_valid, error_message = validate_gate_and_roll(camera_gate, camera_roll)
+    if not is_valid:
+        return JSONResponse(status_code=400, content={
+            "status": "error",
+            "message": error_message,
+            "faces": []
+        })
     camera_gate = camera_gate.lower()
     camera_roll = camera_roll.lower()
     pool = await get_pool()

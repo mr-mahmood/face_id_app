@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from api.models import Enroll
 from database.connection import get_pool
 from fastapi import APIRouter, Form, Request, Depends, Header
-from api.utils import get_organization_name_from_request
+from api.utils import get_organization_name_from_request, validate_gate_and_roll
 from api.dependencies import get_api_key
 
 router = APIRouter()
@@ -64,10 +64,15 @@ async def enroll_identity(
     - Camera uniqueness is enforced per organization, gate, and role combination
     """
     try:
-        print(x_organization_id)
         pool = await get_pool()
-        gate = gate.lower()
-        roll = roll.lower()
+
+        is_valid, error_message = validate_gate_and_roll(gate, roll)
+        if not is_valid:
+            return JSONResponse(status_code=400, content={
+                "status": "error",
+                "message": error_message
+            })
+
         if pool is None:
             raise ValueError("Database connection pool is not available")
 

@@ -6,6 +6,7 @@ from api.endpoints.enroll_identity import router as enroll_identities_router
 from api.endpoints.enroll_organization import router as enroll_organization_router
 from api.endpoints.enroll_camera import router as enroll_camera_router
 from api.endpoints.enroll_refrence_image import router as enroll_identity_reference_image_router
+from api.endpoints.api_key_rotation import router as api_key_rotation_router
 from api.endpoints.clients import router as client_info_router
 from api.endpoints.model_status import router as model_status_router
 from database.connection import get_pool
@@ -53,8 +54,8 @@ app.include_router(enroll_organization_router, prefix="/api", tags=["Enroll"])
 app.include_router(enroll_camera_router, prefix="/api", tags=["Enroll"])
 app.include_router(enroll_identities_router, prefix="/api", tags=["Enroll"])
 app.include_router(enroll_identity_reference_image_router, prefix="/api", tags=["Enroll"])
+app.include_router(api_key_rotation_router, prefix="/api", tags=["Enroll"])
 
 app.include_router(client_info_router, prefix="/api", tags=["Admin"])
-
-app.include_router(model_status_router, prefix="/api", tags=["System"])
+app.include_router(model_status_router, prefix="/api", tags=["Admin"])
 
